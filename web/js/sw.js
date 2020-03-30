@@ -1,6 +1,6 @@
 "use strict";
 
-const version = 4;
+const version = 5;
 var cacheName = `ramblings-${version}`;
 var isOnline = true;
 var isLoggedIn = true;
@@ -33,6 +33,9 @@ self.addEventListener("activate", onActivate);
 //communicate with the browser
 self.addEventListener("message", onMessage);
 
+//handle routing and ofline resources
+self.addEventListener("fetch", onFetch);
+
 main().catch(console.error);
 
 
@@ -61,7 +64,7 @@ async function cacheLoggedOutFiles(forceReload = false){
 
                 let fetchOptions = {
                     method: "GET",
-                    cache: "no-cache",
+                    cache: "no-store",
                     credentials: "omit"
                 };
 
@@ -138,3 +141,40 @@ async function handleActivation(){
 }
 
 
+function onFetch(evt){
+    evt.respondWith(router(evt.request));
+}
+
+async function router(req){
+    var url = new URL(req.url);
+    var reqURL = url.pathname;
+
+    var cache = await caches.open(cacheName);
+
+    if(url.origin == location.origin){
+        let res;
+        try{
+            let fetchOptions = {
+                method: req.method,
+                credentials: "omit",
+                cache: "no-store",
+                headers: req.headers
+            }
+
+            res = await fetch(req.url, fetchOptions);
+            
+            if(res && res.ok){
+                await cache.put(reqURL, res.clone());
+                return res;
+            }
+        }
+        catch(err){}
+
+        res = await cache.match(reqURL);
+        if(res){
+            return res.clone();
+        }
+    }
+
+    //todo
+}
