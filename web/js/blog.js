@@ -70,6 +70,11 @@
 			console.log("Received status update request from service worker ...");
 			sendStatusUpdate(evt.ports && evt.ports[1]);
 		}
+		else if (data == "force-logout") {
+			document.cookie = "isLoggedIn=";
+			isLoggedIn = false;
+			sendStatusUpdate();
+		}
 	}
 
 	function sendStatusUpdate(target){
